@@ -1,90 +1,122 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
 )
 
 var (
-	availableUsernames []string
-	lock               sync.Mutex
+	lock   sync.Mutex
+	client = &http.Client{Timeout: 5 * time.Second}
+	writer *bufio.Writer
+	file   *os.File
 )
 
-func generate4l() string {
-	letters := "abcdefghijklmnopqrstuvwxyz"
+const (
+	letters = "abcdefghijklmnopqrstuvwxyz"
+	chars   = "abcdefghijklmnopqrstuvwxyz0123456789"
+	baseURL = "https://soundcloud.com/%s" // change this 
+)
+
+func generate(r *rand.Rand, mode string) string {
+	var pool string
+	if mode == "4l" {
+		pool = letters
+	} else {
+		pool = chars
+	}
+
 	sb := strings.Builder{}
+	sb.Grow(4)
+
 	for i := 0; i < 4; i++ {
-		sb.WriteByte(letters[rand.Intn(len(letters))])
+		sb.WriteByte(pool[r.Intn(len(pool))])
 	}
 	return sb.String()
 }
 
-func generate4c() string {
-	chars := "abcdefghijklmnopqrstuvwxyz0123456789"
-	sb := strings.Builder{}
-	for i := 0; i < 4; i++ {
-		sb.WriteByte(chars[rand.Intn(len(chars))])
-	}
-	return sb.String()
+func saveToFile(username string) {
+	lock.Lock()
+	defer lock.Unlock()
+
+	writer.WriteString(username + "\n")
+	writer.Flush() 
 }
 
-func checkYoutube(username string) {
-	url := fmt.Sprintf("https://www.github.com/%s", username) // change the site to be whatever u want
-	client := http.Client{
-		Timeout: 5 * time.Second,
-	}
-	resp, err := client.Get(url)
+func checkUsername(ctx context.Context, username string) {
+	url := fmt.Sprintf(baseURL, username)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		fmt.Printf("[wrong] %s\n", username)
+		fmt.Printf("[error] %s: %v\n", username, err)
+		return
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("[failed] %s\n", username)
 		return
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
-		result := fmt.Sprintf("[available] %s", username)
-		fmt.Println(result)
-		lock.Lock()
-		availableUsernames = append(availableUsernames, username)
-		lock.Unlock()
+	if resp.StatusCode == http.StatusNotFound {
+		fmt.Printf("[available] %s\n", username)
+		saveToFile(username)
 	} else {
 		fmt.Printf("[taken] %s\n", username)
 	}
 }
 
-func worker(mode string, count int, wg *sync.WaitGroup) {
+func worker(mode string, jobs <-chan int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for i := 0; i < count; i++ {
-		var username string
-		if mode == "4l" {
-			username = generate4l()
-		} else {
-			username = generate4c()
-		}
-		checkYoutube(username)
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	for range jobs {
+		username := generate(r, mode)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		checkUsername(ctx, username)
+		cancel()
 	}
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	mode := "4l"
 	totalChecks := 100
-	threadCount := 50
-	checksPerThread := totalChecks / threadCount
+	threadCount := 10
 
+	var err error
+	file, err = os.Create("available.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	writer = bufio.NewWriter(file)
+	defer writer.Flush()
+
+	jobs := make(chan int, totalChecks)
 	var wg sync.WaitGroup
+
 	for i := 0; i < threadCount; i++ {
 		wg.Add(1)
-		go worker(mode, checksPerThread, &wg)
+		go worker(mode, jobs, &wg)
 	}
+
+	for i := 0; i < totalChecks; i++ {
+		jobs <- i
+	}
+	close(jobs)
+
 	wg.Wait()
 
-	fmt.Println("Available usernames")
-	for _, name := range availableUsernames {
-		fmt.Println(name)
-	}
+	fmt.Println("\nSaved available usernames to available.txt")
 }
