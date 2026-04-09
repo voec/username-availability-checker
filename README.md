@@ -1,8 +1,8 @@
-# a fast, concurrent username availability checker written in Go. this tool generates random usernames and checks whether they are available on a specified website (currently for GitHub).
+> # a fast, concurrent username availability checker written in Go. this tool generates random usernames and checks whether they are available on a specified website (currently for GitHub).
 
 ---
 
-## Features
+## features
 
 - concurrent checking using goroutines  
 - supports:
