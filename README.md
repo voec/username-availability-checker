@@ -75,7 +75,7 @@ func main() {
 | `baseURL`     | website URL format used to check usernames. `%s` is replaced with the generated username.         | `"https://github.com/%s"`<br>`"https://soundcloud.com/%s"`              |
 | `mode`        | username generation mode.                                                                         | `"4l"` = 4 lowercase letters<br>`"4c"` = 4 lowercase letters or numbers |
 | `totalChecks` | total number of usernames to generate and check.                                                  | `100`, `1000`, `50000`                                                  |
-| `threadCount` | number of concurrent worker goroutines. Higher values increase speed but may trigger rate limits. | `10`, `50`, `100`                                                       |
+| `threadCount` | number of concurrent worker goroutines. higher values increase speed and may trigger rate limits. | `10`, `50`, `100`                                                       |
 
 ---
 
