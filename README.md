@@ -51,3 +51,48 @@ make sure u have Go installed (1.18+ recommended).
 git clone https://github.com/voec/username-availability-checker
 cd username-availability-checker
 go run main.go
+```
+
+---
+
+## configuration
+
+you can edit the variables inside `main.go` to customize how the checker behaves:
+
+```go
+const baseURL = "https://github.com/%s" 
+
+func main() {
+	mode := "4l"
+	totalChecks := 100
+	threadCount := 10
+}
+```
+---
+
+| Variable      | Description                                                                                       | Example Values                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `baseURL`     | website URL format used to check usernames. `%s` is replaced with the generated username.         | `"https://github.com/%s"`<br>`"https://soundcloud.com/%s"`              |
+| `mode`        | username generation mode.                                                                         | `"4l"` = 4 lowercase letters<br>`"4c"` = 4 lowercase letters or numbers |
+| `totalChecks` | total number of usernames to generate and check.                                                  | `100`, `1000`, `50000`                                                  |
+| `threadCount` | number of concurrent worker goroutines. Higher values increase speed but may trigger rate limits. | `10`, `50`, `100`                                                       |
+
+---
+
+## example
+
+```
+const baseURL = "https://soundcloud.com/%s"
+func main() {
+	mode := "4c"
+	totalChecks := 5000
+	threadCount := 50
+}
+```
+
+this will:
+
+- generate random 4-character usernames
+- check 5,000 usernames
+- use 50 concurrent workers
+- test availability on SoundCloud
