@@ -1,1 +1,1 @@
-# usename-sniper
+# customizable username sniper
