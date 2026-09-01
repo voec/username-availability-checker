@@ -78,10 +78,10 @@ type Config struct {
 }
 
 var defaultConfig = Config{
-	BaseURL:           "https://haunt.gg/%s",
+	BaseURL:           "https://github.com/%s",
 	Method:            "GET",
 	Mode:              "letters",
-	Length:            5,
+	Length:            4,
 	TotalChecks:       100,
 	ThreadCount:       10,
 	OutputFile:        "available.txt",
